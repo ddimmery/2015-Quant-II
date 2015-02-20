@@ -154,12 +154,8 @@ where $\eta$ is the error in the structural model and $\xi$ is the error in the 
 
 ```r
 require(foreign,quietly=TRUE)
-dat <- read.dta("table_5.dta")
+dat <- read.dta("maketable5.dta")
 dat <- subset(dat, baseco==1)
-```
-
-```
-## Error in eval(expr, envir, enclos): object 'baseco' not found
 ```
 
 # Estimate IV via 2SLS
@@ -171,36 +167,41 @@ require(AER)
 
 ```
 ## Loading required package: AER
-```
-
-```
-## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called 'AER'
+## Loading required package: lmtest
+## Loading required package: zoo
+## 
+## Attaching package: 'zoo'
+## 
+## The following objects are masked from 'package:base':
+## 
+##     as.Date, as.Date.numeric
+## 
+## Loading required package: sandwich
+## Loading required package: survival
+## Loading required package: splines
 ```
 
 ```r
 first <- lm(avexpr~logem4+f_brit+f_french,dat)
-```
-
-```
-## Error in eval(expr, envir, enclos): object 'avexpr' not found
-```
-
-```r
 iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "ivreg"
-```
-
-```r
 require(car)
 linearHypothesis(first,"logem4",test="F")
 ```
 
 ```
-## Error in linearHypothesis(first, "logem4", test = "F"): object 'first' not found
+## Linear hypothesis test
+## 
+## Hypothesis:
+## logem4 = 0
+## 
+## Model 1: restricted model
+## Model 2: avexpr ~ logem4 + f_brit + f_french
+## 
+##   Res.Df     RSS Df Sum of Sq      F    Pr(>F)    
+## 1     61 116.983                                  
+## 2     60  94.013  1    22.969 14.659 0.0003101 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 # Examine Output
@@ -211,7 +212,27 @@ summary(iv2sls)
 ```
 
 ```
-## Error in summary(iv2sls): object 'iv2sls' not found
+## 
+## Call:
+## ivreg(formula = logpgp95 ~ avexpr + f_brit + f_french | logem4 + 
+##     f_brit + f_french, data = dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -2.2716 -0.7488  0.0728  0.7544  2.4004 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   1.3724     1.3880   0.989    0.327    
+## avexpr        1.0779     0.2176   4.953 6.28e-06 ***
+## f_brit       -0.7777     0.3543  -2.195    0.032 *  
+## f_french     -0.1170     0.3548  -0.330    0.743    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.043 on 60 degrees of freedom
+## Multiple R-Squared: 0.04833,	Adjusted R-squared: 0.0007476 
+## Wald test: 10.07 on 3 and 60 DF,  p-value: 1.822e-05
 ```
 
 # Sensitivity Analysis
@@ -234,26 +255,13 @@ ExclSens <- function(g) {
   coef(ivreg(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,cbind(dat,newY)))[2]
 }
 sens.coefs <- sapply(gamma,ExclSens)
-```
-
-```
-## Error in coef(ivreg(newY ~ avexpr + f_brit + f_french, ~logem4 + f_brit + : could not find function "ivreg"
-```
-
-```r
 names(sens.coefs)<- round(gamma,3)
-```
-
-```
-## Error in names(sens.coefs) <- round(gamma, 3): object 'sens.coefs' not found
-```
-
-```r
 round(sens.coefs,3)
 ```
 
 ```
-## Error in eval(expr, envir, enclos): object 'sens.coefs' not found
+##     -1  -0.75   -0.5  -0.25      0   0.25    0.5   0.75      1 
+## -0.793 -0.326  0.142  0.610  1.078  1.546  2.013  2.481  2.949
 ```
 
 # More IV Stuff
@@ -278,47 +286,10 @@ d$dism1990_b<-with(d,ifelse(dism1990 >= quantile(dism1990,.5),1,0))
 first.stage <- lm(dism1990~herf+lenper,d)
 first.stage.b <- lm(dism1990_b~herf_b+lenper,d)
 require(AER)
-```
-
-```
-## Loading required package: AER
-```
-
-```
-## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called 'AER'
-```
-
-```r
 gini.iv <- ivreg(lngini_b~dism1990+lenper,~herf+lenper,d)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "ivreg"
-```
-
-```r
 gini.iv.b <- ivreg(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "ivreg"
-```
-
-```r
 pov.iv <- ivreg(povrate_b~dism1990+lenper,~herf+lenper,d)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "ivreg"
-```
-
-```r
 pov.iv.b <- ivreg(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "ivreg"
 ```
 
 # Base Results
@@ -346,7 +317,8 @@ round(summary(gini.iv)$coefficients[2,],3)
 ```
 
 ```
-## Error in summary(gini.iv): object 'gini.iv' not found
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.875      0.302      2.895      0.005
 ```
 
 ```r
@@ -354,7 +326,8 @@ round(summary(gini.iv.b)$coefficients[2,],3)
 ```
 
 ```
-## Error in summary(gini.iv.b): object 'gini.iv.b' not found
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.211      0.081      2.615      0.010
 ```
 
 ```r
@@ -362,7 +335,8 @@ round(summary(pov.iv)$coefficients[2,],3)
 ```
 
 ```
-## Error in summary(pov.iv): object 'pov.iv' not found
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.258      0.144      1.798      0.075
 ```
 
 ```r
@@ -370,7 +344,8 @@ round(summary(pov.iv.b)$coefficients[2,],3)
 ```
 
 ```
-## Error in summary(pov.iv.b): object 'pov.iv.b' not found
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.059      0.039      1.543      0.125
 ```
 
 # Abadie's $\kappa$

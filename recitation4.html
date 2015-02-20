@@ -198,29 +198,68 @@ est&lt;-<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span clas
 </ul>
 <div class="fragment">
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
-dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;table_5.dta&quot;</span>)
+dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;maketable5.dta&quot;</span>)
 dat &lt;-<span class="st"> </span><span class="kw">subset</span>(dat, baseco==<span class="dv">1</span>)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): object &#39;baseco&#39; not found</code></pre>
 </div>
 </section>
 <section id="estimate-iv-via-2sls" class="slide level1">
 <h1>Estimate IV via 2SLS</h1>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(AER)</code></pre>
-<pre><code>## Loading required package: AER</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;AER&#39;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): object &#39;avexpr&#39; not found</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)
+<pre><code>## Loading required package: AER
+## Loading required package: lmtest
+## Loading required package: zoo
+## 
+## Attaching package: &#39;zoo&#39;
+## 
+## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric
+## 
+## Loading required package: sandwich
+## Loading required package: survival
+## Loading required package: splines</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)
+iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
+<span class="kw">require</span>(car)
 <span class="kw">linearHypothesis</span>(first,<span class="st">&quot;logem4&quot;</span>,<span class="dt">test=</span><span class="st">&quot;F&quot;</span>)</code></pre>
-<pre><code>## Error in linearHypothesis(first, &quot;logem4&quot;, test = &quot;F&quot;): object &#39;first&#39; not found</code></pre>
+<pre><code>## Linear hypothesis test
+## 
+## Hypothesis:
+## logem4 = 0
+## 
+## Model 1: restricted model
+## Model 2: avexpr ~ logem4 + f_brit + f_french
+## 
+##   Res.Df     RSS Df Sum of Sq      F    Pr(&gt;F)    
+## 1     61 116.983                                  
+## 2     60  94.013  1    22.969 14.659 0.0003101 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 </section>
 <section id="examine-output" class="slide level1">
 <h1>Examine Output</h1>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(iv2sls)</code></pre>
-<pre><code>## Error in summary(iv2sls): object &#39;iv2sls&#39; not found</code></pre>
+<pre><code>## 
+## Call:
+## ivreg(formula = logpgp95 ~ avexpr + f_brit + f_french | logem4 + 
+##     f_brit + f_french, data = dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -2.2716 -0.7488  0.0728  0.7544  2.4004 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   1.3724     1.3880   0.989    0.327    
+## avexpr        1.0779     0.2176   4.953 6.28e-06 ***
+## f_brit       -0.7777     0.3543  -2.195    0.032 *  
+## f_french     -0.1170     0.3548  -0.330    0.743    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 1.043 on 60 degrees of freedom
+## Multiple R-Squared: 0.04833, Adjusted R-squared: 0.0007476 
+## Wald test: 10.07 on 3 and 60 DF,  p-value: 1.822e-05</code></pre>
 </section>
 <section id="sensitivity-analysis" class="slide level1">
 <h1>Sensitivity Analysis</h1>
@@ -241,12 +280,11 @@ ExclSens &lt;-<span class="st"> </span>function(g) {
   newY &lt;-<span class="st"> </span>dat$logpgp95 -<span class="st"> </span>g*dat$logem4
   <span class="kw">coef</span>(<span class="kw">ivreg</span>(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,<span class="kw">cbind</span>(dat,newY)))[<span class="dv">2</span>]
 }
-sens.coefs &lt;-<span class="st"> </span><span class="kw">sapply</span>(gamma,ExclSens)</code></pre>
-<pre><code>## Error in coef(ivreg(newY ~ avexpr + f_brit + f_french, ~logem4 + f_brit + : could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">names</span>(sens.coefs)&lt;-<span class="st"> </span><span class="kw">round</span>(gamma,<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in names(sens.coefs) &lt;- round(gamma, 3): object &#39;sens.coefs&#39; not found</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(sens.coefs,<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): object &#39;sens.coefs&#39; not found</code></pre>
+sens.coefs &lt;-<span class="st"> </span><span class="kw">sapply</span>(gamma,ExclSens)
+<span class="kw">names</span>(sens.coefs)&lt;-<span class="st"> </span><span class="kw">round</span>(gamma,<span class="dv">3</span>)
+<span class="kw">round</span>(sens.coefs,<span class="dv">3</span>)</code></pre>
+<pre><code>##     -1  -0.75   -0.5  -0.25      0   0.25    0.5   0.75      1 
+## -0.793 -0.326  0.142  0.610  1.078  1.546  2.013  2.481  2.949</code></pre>
 </section>
 <section id="more-iv-stuff" class="slide level1">
 <h1>More IV Stuff</h1>
@@ -267,18 +305,11 @@ d$herf_b&lt;-<span class="kw">with</span>(d,<span class="kw">ifelse</span>(herf 
 d$dism1990_b&lt;-<span class="kw">with</span>(d,<span class="kw">ifelse</span>(dism1990 &gt;=<span class="st"> </span><span class="kw">quantile</span>(dism1990,.<span class="dv">5</span>),<span class="dv">1</span>,<span class="dv">0</span>))
 first.stage &lt;-<span class="st"> </span><span class="kw">lm</span>(dism1990~herf+lenper,d)
 first.stage.b &lt;-<span class="st"> </span><span class="kw">lm</span>(dism1990_b~herf_b+lenper,d)
-<span class="kw">require</span>(AER)</code></pre>
-<pre><code>## Loading required package: AER</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;AER&#39;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">gini.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990+lenper,~herf+lenper,d)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">gini.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">pov.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990+lenper,~herf+lenper,d)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">pov.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+<span class="kw">require</span>(AER)
+gini.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990+lenper,~herf+lenper,d)
+gini.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)
+pov.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990+lenper,~herf+lenper,d)
+pov.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)</code></pre>
 </div>
 </section>
 <section id="base-results" class="slide level1">
@@ -290,13 +321,17 @@ first.stage.b &lt;-<span class="st"> </span><span class="kw">lm</span>(dism1990_
 <pre><code>##   Estimate Std. Error    t value   Pr(&gt;|t|) 
 ##      0.372      0.083      4.481      0.000</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(gini.iv)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in summary(gini.iv): object &#39;gini.iv&#39; not found</code></pre>
+<pre><code>##   Estimate Std. Error    t value   Pr(&gt;|t|) 
+##      0.875      0.302      2.895      0.005</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(gini.iv.b)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in summary(gini.iv.b): object &#39;gini.iv.b&#39; not found</code></pre>
+<pre><code>##   Estimate Std. Error    t value   Pr(&gt;|t|) 
+##      0.211      0.081      2.615      0.010</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(pov.iv)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in summary(pov.iv): object &#39;pov.iv&#39; not found</code></pre>
+<pre><code>##   Estimate Std. Error    t value   Pr(&gt;|t|) 
+##      0.258      0.144      1.798      0.075</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(pov.iv.b)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
-<pre><code>## Error in summary(pov.iv.b): object &#39;pov.iv.b&#39; not found</code></pre>
+<pre><code>##   Estimate Std. Error    t value   Pr(&gt;|t|) 
+##      0.059      0.039      1.543      0.125</code></pre>
 </section>
 <section id="abadies-kappa" class="slide level1">
 <h1>Abadie’s <span class="math">\(\kappa\)</span></h1>

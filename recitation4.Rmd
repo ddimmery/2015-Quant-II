@@ -112,7 +112,7 @@ where $\eta$ is the error in the structural model and $\xi$ is the error in the 
 
 ```{r 6-col-orig-data}
 require(foreign,quietly=TRUE)
-dat <- read.dta("table_5.dta")
+dat <- read.dta("maketable5.dta")
 dat <- subset(dat, baseco==1)
 ```
 
