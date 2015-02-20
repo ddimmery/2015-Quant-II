@@ -119,11 +119,16 @@ dat <- subset(dat, baseco==1)
 # Estimate IV via 2SLS
 
 ```{r 6-est-2sls}
-require(AER)
+require(AER,quietly=TRUE)
 first <- lm(avexpr~logem4+f_brit+f_french,dat)
 iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
 require(car)
 linearHypothesis(first,"logem4",test="F")
+```
+
+# Examine First Stage
+```{r 6-show-first}
+summary(first)
 ```
 
 # Examine Output

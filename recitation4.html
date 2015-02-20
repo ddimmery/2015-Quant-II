@@ -204,21 +204,8 @@ dat &lt;-<span class="st"> </span><span class="kw">subset</span>(dat, baseco==<s
 </section>
 <section id="estimate-iv-via-2sls" class="slide level1">
 <h1>Estimate IV via 2SLS</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(AER)</code></pre>
-<pre><code>## Loading required package: AER
-## Loading required package: lmtest
-## Loading required package: zoo
-## 
-## Attaching package: &#39;zoo&#39;
-## 
-## The following objects are masked from &#39;package:base&#39;:
-## 
-##     as.Date, as.Date.numeric
-## 
-## Loading required package: sandwich
-## Loading required package: survival
-## Loading required package: splines</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(AER,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
+first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)
 iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
 <span class="kw">require</span>(car)
 <span class="kw">linearHypothesis</span>(first,<span class="st">&quot;logem4&quot;</span>,<span class="dt">test=</span><span class="st">&quot;F&quot;</span>)</code></pre>
@@ -235,6 +222,30 @@ iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4
 ## 2     60  94.013  1    22.969 14.659 0.0003101 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+</section>
+<section id="examine-first-stage" class="slide level1">
+<h1>Examine First Stage</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(first)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = avexpr ~ logem4 + f_brit + f_french, data = dat)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -2.98210 -0.86954  0.05616  0.86237  2.79411 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   8.7467     0.6904  12.669  &lt; 2e-16 ***
+## logem4       -0.5344     0.1396  -3.829  0.00031 ***
+## f_brit        0.6293     0.3665   1.717  0.09109 .  
+## f_french      0.0474     0.4295   0.110  0.91249    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 1.252 on 60 degrees of freedom
+## Multiple R-squared:  0.3081, Adjusted R-squared:  0.2736 
+## F-statistic: 8.908 on 3 and 60 DF,  p-value: 5.704e-05</code></pre>
 </section>
 <section id="examine-output" class="slide level1">
 <h1>Examine Output</h1>

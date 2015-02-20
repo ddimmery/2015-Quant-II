@@ -162,26 +162,7 @@ dat <- subset(dat, baseco==1)
 
 
 ```r
-require(AER)
-```
-
-```
-## Loading required package: AER
-## Loading required package: lmtest
-## Loading required package: zoo
-## 
-## Attaching package: 'zoo'
-## 
-## The following objects are masked from 'package:base':
-## 
-##     as.Date, as.Date.numeric
-## 
-## Loading required package: sandwich
-## Loading required package: survival
-## Loading required package: splines
-```
-
-```r
+require(AER,quietly=TRUE)
 first <- lm(avexpr~logem4+f_brit+f_french,dat)
 iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
 require(car)
@@ -202,6 +183,35 @@ linearHypothesis(first,"logem4",test="F")
 ## 2     60  94.013  1    22.969 14.659 0.0003101 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+# Examine First Stage
+
+```r
+summary(first)
+```
+
+```
+## 
+## Call:
+## lm(formula = avexpr ~ logem4 + f_brit + f_french, data = dat)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -2.98210 -0.86954  0.05616  0.86237  2.79411 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   8.7467     0.6904  12.669  < 2e-16 ***
+## logem4       -0.5344     0.1396  -3.829  0.00031 ***
+## f_brit        0.6293     0.3665   1.717  0.09109 .  
+## f_french      0.0474     0.4295   0.110  0.91249    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.252 on 60 degrees of freedom
+## Multiple R-squared:  0.3081,	Adjusted R-squared:  0.2736 
+## F-statistic: 8.908 on 3 and 60 DF,  p-value: 5.704e-05
 ```
 
 # Examine Output
