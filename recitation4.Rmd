@@ -1,0 +1,226 @@
+% Instrumental Variables
+% Drew Dimmery <drewd@nyu.edu>
+% February 20, 2015
+
+# Debugging
+- Rubber duck debugging:
+    - Use when you can't figure out why your code doesn't work right
+    - Find something inanimate to talk to
+    - Explain what your code does, line by excruciating line
+    - If you can't explain it, that's probably where the problem is.
+    - This works ridiculously well.
+    - You should also be able to tell your duck exactly what is stored in each
+      variable at all times.
+- Check individual elements of your code on small data such that you know what
+  the right answer *should* be.
+
+# Introduce an Example
+- We'll be working with data from a paper in the most recent issue of IO.
+- Helfer, L.R. and E. Voeten. (2014) "International Courts as Agents of Legal Change: Evidence from LGBT Rights in Europe"
+- The treatment we are interested in is the presence of absence of a ECtHR judgment.
+- The outcome is the adoption of progressive LGBT policy.
+- And there's a battery of controls, of course.
+- Voeten has helpfully put all [replication materials online](http://hdl.handle.net/1902.1/19324).
+
+# Prepare example
+
+```{r}
+require(foreign,quietly=TRUE)
+d <- read.dta("replicationdataIOLGBT.dta")
+#Base specification
+d$ecthrpos <- as.double(d$ecthrpos)-1
+d.lm <- lm(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
+d <- d[-d.lm$na.action,]
+d$issue <- as.factor(d$issue)
+d$ccode <- as.factor(d$ccode)
+summary(d.lm)$coefficients[1:11,]
+```
+
+```{r echo=FALSE}
+d.lm <- lm(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
+```
+
+# Marginal Effects
+- [Blattman (2009)](http://chrisblattman.com/projects/sway/) uses marginal effects "well" in the sense of causal inference.
+- Use the builtin `predict` function; it will make your life easier.
+
+. . .
+
+```{r}
+d.lm.interact <- lm(policy~ecthrpos*pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
+frame0 <- frame1 <- model.frame(d.lm.interact)
+frame0[,"ecthrpos"] <- 0
+frame1[,"ecthrpos"] <- 1
+meff <- mean(predict(d.lm.interact,newd=frame1) - predict(d.lm.interact,newd=frame0))
+meff
+```
+
+- Why might this be preferable to "setting things at their means/medians"?
+- It's essentially integrating over the sample's distribution of observed characteristics.
+- (And if the sample is a SRS from the population [or survey weights make it LOOK like it is], this will then get you the marginal effect on the population of interest)
+
+# Delta Method
+- Note 1: We know that our vector of coefficients are asymptotically multivariate normal.
+- Note 2: We can approximate the distribution of many (not just linear) functions of these coefficients using the delta method.
+- Delta method says that you can approximate the distribution of $h(b_n)$ with $\bigtriangledown{h}(b)'\Omega\bigtriangledown{h}(b)$ Where $\Omega$ is the asymptotic variance of $b$.
+- In practice, this means that we just need to be able to derive the function whose distribution we wish to approximate.
+
+# Trivial Example
+- Maybe we're interested in the ratio of the coefficient on `ecthrpos` to that of `pubsupport`.
+- Call it $b_2 \over b_3$. The gradient is $(\frac{1}{b_3}, \frac{b_2}{b_3^2})$
+- Estimate this easily in R with:
+
+. . .
+
+```{r}
+grad<-c(1/coef(d.lm)[3],coef(d.lm)[2]/coef(d.lm)[3]^2)
+grad
+se<-sqrt(t(grad)%*%vcov(d.lm)[2:3,2:3]%*%grad)
+est<-coef(d.lm)[2]/coef(d.lm)[3]
+c(estimate=est,std.error=se)
+require(car)
+deltaMethod(d.lm,"ecthrpos/pubsupport")
+```
+
+# Linear Functions
+- But for most "marginal effects", you don't need to use the delta method.
+- Just remember your rules for variances.
+- $\text{var}(aX+bY) = a^2\text{var}(X) + b^2\text{var}(Y) + 2ab\text{cov}(X,Y)$
+- If you are just looking at changes with respect to a single variable, you can just multiply standard errors.
+- That is, a change in a variable of 3 units means that the standard error for the marginal effect would be 3 times the standard error of the coefficient.
+- This isn't what Clarify does, though.
+  
+# Instrumental Variables
+- $\rho = {\text{Cov}(Y_i,Z_i) \over \text{Cov}(S_i,Z_i)} = { { \text{Cov}(Y_i,Z_i) \over \text{Var}(Z_i)} \over {\text{Cov}(S_i,Z_i) \over \text{Var}(Z_i)}} = {\text{Reduced form} \over \text{First stage}}$
+- If we have a perfect instrument, this will be unbiased.
+- But bias is a function of both violation of exclusion restriction and of strength of first stage.
+- 2SLS has finite sample bias. (Cyrus showed this, but didn't dwell on it)
+- In particular, it [can be shown](http://econ.lse.ac.uk/staff/spischke/ec533/Weak%20IV.pdf) that this bias "is":  
+${\sigma_{\eta \xi} \over \sigma_{\xi}^2}{1 \over F + 1}$  
+where $\eta$ is the error in the structural model and $\xi$ is the error in the first stage.
+- With an irrelevant instrument ($F=0$), the bias is equal to that of OLS (regression of $Y$ on $X$).
+- There are some bias corrections for this, we might talk about this next week.
+
+# Setup IV example
+- For our example with IV, we will start with AJR (2001) - Colonial Origins of Comparative Development
+- Treatment is average protection from expropriation
+- Exogenous covariates are dummies for British/French colonial presence
+- Instrument is settler mortality
+- Outcome is log(GDP) in 1995
+
+. . .
+
+```{r 6-col-orig-data}
+require(foreign)
+dat <- read.dta("maketable5.dta")
+dat <- subset(dat, baseco==1)
+```
+
+# Estimate IV via 2SLS
+
+```{r 6-est-2sls}
+require(AER)
+first <- lm(avexpr~logem4+f_brit+f_french,dat)
+iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
+require(car)
+linearHypothesis(first,"logem4",test="F")
+```
+
+# Examine Output
+
+```{r 6-show-2sls}
+summary(iv2sls)
+```
+
+# Sensitivity Analysis
+- Conley, Hansen and Rossi (2012)
+- Suppose that the exclusion restriction does NOT hold, and there exists a direct effect from the instrument to the outcome.
+- That is, the structural model is:  
+$Y = X\beta + Z\gamma + \epsilon$
+- If $\gamma$ is zero, the exclusion restriction holds (we're in a structural framework)
+- We can assume a particular value of $\gamma$, take $\tilde{Y} = Y - Z\gamma$ and estimate our model, gaining an estimate of $\beta$.
+- This defines a sensitivity analysis on the exclusion restriction.
+- Subject to an assumption about the support of $\gamma$, they suggest estimating in a grid over this domain, and then taking the union of the confidence intervals for each value of $\gamma$ as the combined confidence interval (which will cover).
+
+. . .
+
+```{r 6-iv-sens}
+gamma <- seq(-1,1,.25)
+ExclSens <- function(g) {
+  newY <- dat$logpgp95 - g*dat$logem4
+  coef(ivreg(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,cbind(dat,newY)))[2]
+}
+sens.coefs <- sapply(gamma,ExclSens)
+names(sens.coefs)<- round(gamma,3)
+round(sens.coefs,3)
+```
+
+# More IV Stuff
+- We're going to be looking at [Ananat
+  (2011)](http://www.aeaweb.org/articles.php?doi=10.1257/app.3.2.34) in AEJ
+- This study looks at the effect of racial segregation on economic outcomes.
+- Outcome: Poverty rate & Inequality (Gini index)
+- Treatment: Segregation
+- Instrument: "railroad division index"
+- Main covariate of note: railroad length in a town
+- I'm dichotomizing treatment and instrument for simplicity.
+- And my outcomes are for the Black subsample
+
+. . .
+
+```{r 7-iv-setup}
+require(foreign)
+d<-read.dta("aej_maindata.dta")
+d$herf_b<-with(d,ifelse(herf >= quantile(herf,.5),1,0))
+d$dism1990_b<-with(d,ifelse(dism1990 >= quantile(dism1990,.5),1,0))
+first.stage <- lm(dism1990~herf+lenper,d)
+first.stage.b <- lm(dism1990_b~herf_b+lenper,d)
+require(AER)
+gini.iv <- ivreg(lngini_b~dism1990+lenper,~herf+lenper,d)
+gini.iv.b <- ivreg(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)
+pov.iv <- ivreg(povrate_b~dism1990+lenper,~herf+lenper,d)
+pov.iv.b <- ivreg(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)
+```
+
+# Base Results
+```{r 7-1st-st}
+round(summary(first.stage)$coefficients[2,],3)
+round(summary(first.stage.b)$coefficients[2,],3)
+round(summary(gini.iv)$coefficients[2,],3)
+round(summary(gini.iv.b)$coefficients[2,],3)
+round(summary(pov.iv)$coefficients[2,],3)
+round(summary(pov.iv.b)$coefficients[2,],3)
+```
+
+# Abadie's $\kappa$
+- Recall from the lecture that we can use a weighting scheme to calculate
+  statistics on the compliant population.
+- $E[g(Y,D,X)|D_1 > D_0] = {1 \over p(D_1>D_0)} E[\kappa g(Y,D,X)]$
+- $\kappa = 1 - {D_i (1-Z_i) \over p(Z_i =0|X)} - {(1-D_i)Z_i \over p(Z_i =1|X)}$
+- $E[\kappa|X] = E[D_1 -D_0|X] = E[D|X,Z=1] - E[D|X,Z=0]$
+- Take $w_i = {\kappa_i \over E[D_{1}-D_{0}|X_i]}$
+- Use this in calculating any interesting statistics (means, variance, etc)
+- This let's you explore the units composing your LATE.
+
+. . .
+
+```{r 7-kappa}
+getKappaWt<-function(D,Z) {
+  pz <- mean(Z)
+  pcomp <- mean(D[Z==1]) - mean(D[Z==0])
+  if(pcomp < 0) stop("Assuming p(D|Z) > .5")
+  kappa <- 1 - D*(1-Z)/(1-pz) - (1-D)*Z/pz
+  # Note that pcomp = mean(kappa)
+  kappa / pcomp
+}
+w <- with(d,getKappaWt(D=dism1990_b,Z=herf_b))
+varlist <- c("closeness","area1910","ctyliterate1920","hsdrop_b","manshr","ctymanuf_wkrs1920","ngov62")
+samp.stats<-sapply(varlist,function(v) mean(d[,v],na.rm=TRUE))
+comp.stats<-sapply(varlist,function(v) weighted.mean(d[,v],w,na.rm=TRUE))
+```
+
+# Examine Complier Statistics
+```{r 7-stats}
+summary(w)
+rbind(sample=samp.stats,compliers=comp.stats)
+```
