@@ -24,7 +24,8 @@
 
 # Prepare example
 
-```{r}
+
+```r
 require(foreign,quietly=TRUE)
 d <- read.dta("replicationdataIOLGBT.dta")
 #Base specification
@@ -36,9 +37,22 @@ d$ccode <- as.factor(d$ccode)
 summary(d.lm)$coefficients[1:11,]
 ```
 
-```{r echo=FALSE}
-d.lm <- lm(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
 ```
+##                   Estimate   Std. Error    t value     Pr(>|t|)
+## (Intercept)  -1.588605e+00 4.956355e-01 -3.2051890 1.360035e-03
+## ecthrpos      6.500937e-02 1.056423e-02  6.1537237 8.289029e-10
+## pubsupport    6.549488e-03 2.742967e-03  2.3877390 1.699714e-02
+## ecthrcountry  1.297322e-01 3.583626e-02  3.6201389 2.979822e-04
+## lgbtlaws      2.358238e-02 6.280655e-03  3.7547646 1.758966e-04
+## cond          9.277344e-02 1.795954e-02  5.1656905 2.508722e-07
+## eumember0    -8.586409e-03 8.497519e-03 -1.0104607 3.123339e-01
+## euemploy      3.659200e-03 1.269275e-02  0.2882905 7.731389e-01
+## coemembe      2.082823e-02 7.276808e-03  2.8622754 4.227313e-03
+## lngdp        -7.522448e-07 4.501392e-07 -1.6711382 9.477027e-02
+## year          8.019830e-04 2.522046e-04  3.1798904 1.484223e-03
+```
+
+
 
 # Marginal Effects
 - [Blattman (2009)](http://chrisblattman.com/projects/sway/) uses marginal effects "well" in the sense of causal inference.
@@ -46,13 +60,18 @@ d.lm <- lm(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemp
 
 . . .
 
-```{r}
+
+```r
 d.lm.interact <- lm(policy~ecthrpos*pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
 frame0 <- frame1 <- model.frame(d.lm.interact)
 frame0[,"ecthrpos"] <- 0
 frame1[,"ecthrpos"] <- 1
 meff <- mean(predict(d.lm.interact,newd=frame1) - predict(d.lm.interact,newd=frame0))
 meff
+```
+
+```
+## [1] 0.08197142
 ```
 
 - Why might this be preferable to "setting things at their means/medians"?
@@ -72,14 +91,47 @@ meff
 
 . . .
 
-```{r}
+
+```r
 grad<-c(1/coef(d.lm)[3],coef(d.lm)[2]/coef(d.lm)[3]^2)
 grad
+```
+
+```
+## pubsupport   ecthrpos 
+##   334.0251  8046.4669
+```
+
+```r
 se<-sqrt(t(grad)%*%vcov(d.lm)[2:3,2:3]%*%grad)
 est<-coef(d.lm)[2]/coef(d.lm)[3]
 c(estimate=est,std.error=se)
-require(car,quietly=TRUE)
+```
+
+```
+## estimate.ecthrpos         std.error 
+##          24.08941          35.32946
+```
+
+```r
+require(car)
+```
+
+```
+## Loading required package: car
+```
+
+```
+## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called 'car'
+```
+
+```r
 deltaMethod(d.lm,"ecthrpos/pubsupport")
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "deltaMethod"
 ```
 
 # Linear Functions
@@ -110,26 +162,86 @@ where $\eta$ is the error in the structural model and $\xi$ is the error in the 
 
 . . .
 
-```{r 6-col-orig-data}
+
+```r
 require(foreign)
 dat <- read.dta("maketable5.dta")
+```
+
+```
+## Error in read.dta("maketable5.dta"): unable to open file: 'No such file or directory'
+```
+
+```r
 dat <- subset(dat, baseco==1)
+```
+
+```
+## Error in subset(dat, baseco == 1): object 'dat' not found
 ```
 
 # Estimate IV via 2SLS
 
-```{r 6-est-2sls}
+
+```r
 require(AER)
+```
+
+```
+## Loading required package: AER
+```
+
+```
+## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called 'AER'
+```
+
+```r
 first <- lm(avexpr~logem4+f_brit+f_french,dat)
+```
+
+```
+## Error in is.data.frame(data): object 'dat' not found
+```
+
+```r
 iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "ivreg"
+```
+
+```r
 require(car)
+```
+
+```
+## Loading required package: car
+```
+
+```
+## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called 'car'
+```
+
+```r
 linearHypothesis(first,"logem4",test="F")
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "linearHypothesis"
 ```
 
 # Examine Output
 
-```{r 6-show-2sls}
+
+```r
 summary(iv2sls)
+```
+
+```
+## Error in summary(iv2sls): object 'iv2sls' not found
 ```
 
 # Sensitivity Analysis
@@ -144,15 +256,41 @@ $Y = X\beta + Z\gamma + \epsilon$
 
 . . .
 
-```{r 6-iv-sens}
+
+```r
 gamma <- seq(-1,1,.25)
 ExclSens <- function(g) {
   newY <- dat$logpgp95 - g*dat$logem4
   coef(ivreg(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,cbind(dat,newY)))[2]
 }
 sens.coefs <- sapply(gamma,ExclSens)
+```
+
+```
+## Note: no visible binding for global variable 'dat' 
+## Note: no visible binding for global variable 'dat' 
+## Note: no visible global function definition for 'ivreg' 
+## Note: no visible binding for global variable 'dat'
+```
+
+```
+## Error in FUN(c(-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1)[[1L]], ...): object 'dat' not found
+```
+
+```r
 names(sens.coefs)<- round(gamma,3)
+```
+
+```
+## Error in names(sens.coefs) <- round(gamma, 3): object 'sens.coefs' not found
+```
+
+```r
 round(sens.coefs,3)
+```
+
+```
+## Error in eval(expr, envir, enclos): object 'sens.coefs' not found
 ```
 
 # More IV Stuff
@@ -168,7 +306,8 @@ round(sens.coefs,3)
 
 . . .
 
-```{r 7-iv-setup}
+
+```r
 require(foreign)
 d<-read.dta("aej_maindata.dta")
 d$herf_b<-with(d,ifelse(herf >= quantile(herf,.5),1,0))
@@ -176,20 +315,99 @@ d$dism1990_b<-with(d,ifelse(dism1990 >= quantile(dism1990,.5),1,0))
 first.stage <- lm(dism1990~herf+lenper,d)
 first.stage.b <- lm(dism1990_b~herf_b+lenper,d)
 require(AER)
+```
+
+```
+## Loading required package: AER
+```
+
+```
+## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called 'AER'
+```
+
+```r
 gini.iv <- ivreg(lngini_b~dism1990+lenper,~herf+lenper,d)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "ivreg"
+```
+
+```r
 gini.iv.b <- ivreg(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "ivreg"
+```
+
+```r
 pov.iv <- ivreg(povrate_b~dism1990+lenper,~herf+lenper,d)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "ivreg"
+```
+
+```r
 pov.iv.b <- ivreg(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)
 ```
 
+```
+## Error in eval(expr, envir, enclos): could not find function "ivreg"
+```
+
 # Base Results
-```{r 7-1st-st}
+
+```r
 round(summary(first.stage)$coefficients[2,],3)
+```
+
+```
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.357      0.081      4.395      0.000
+```
+
+```r
 round(summary(first.stage.b)$coefficients[2,],3)
+```
+
+```
+##   Estimate Std. Error    t value   Pr(>|t|) 
+##      0.372      0.083      4.481      0.000
+```
+
+```r
 round(summary(gini.iv)$coefficients[2,],3)
+```
+
+```
+## Error in summary(gini.iv): object 'gini.iv' not found
+```
+
+```r
 round(summary(gini.iv.b)$coefficients[2,],3)
+```
+
+```
+## Error in summary(gini.iv.b): object 'gini.iv.b' not found
+```
+
+```r
 round(summary(pov.iv)$coefficients[2,],3)
+```
+
+```
+## Error in summary(pov.iv): object 'pov.iv' not found
+```
+
+```r
 round(summary(pov.iv.b)$coefficients[2,],3)
+```
+
+```
+## Error in summary(pov.iv.b): object 'pov.iv.b' not found
 ```
 
 # Abadie's $\kappa$
@@ -204,7 +422,8 @@ round(summary(pov.iv.b)$coefficients[2,],3)
 
 . . .
 
-```{r 7-kappa}
+
+```r
 getKappaWt<-function(D,Z) {
   pz <- mean(Z)
   pcomp <- mean(D[Z==1]) - mean(D[Z==0])
@@ -220,7 +439,25 @@ comp.stats<-sapply(varlist,function(v) weighted.mean(d[,v],w,na.rm=TRUE))
 ```
 
 # Examine Complier Statistics
-```{r 7-stats}
+
+```r
 summary(w)
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  -2.511  -2.429   2.470   1.000   2.470   2.470
+```
+
+```r
 rbind(sample=samp.stats,compliers=comp.stats)
+```
+
+```
+##           closeness area1910 ctyliterate1920  hsdrop_b    manshr
+## sample    -362.4348 14626.43       0.9585012 0.2516300 0.1891766
+## compliers -299.1428 18012.56       0.9514523 0.2423754 0.2109807
+##           ctymanuf_wkrs1920   ngov62
+## sample            0.4618666 55.55072
+## compliers         0.4266065 83.65072
 ```
