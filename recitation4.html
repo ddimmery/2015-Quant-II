@@ -158,12 +158,8 @@ est&lt;-<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span clas
 <span class="kw">c</span>(<span class="dt">estimate=</span>est,<span class="dt">std.error=</span>se)</code></pre>
 <pre><code>## estimate.ecthrpos         std.error 
 ##          24.08941          35.32946</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)</code></pre>
-<pre><code>## Loading required package: car</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;car&#39;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deltaMethod</span>(d.lm,<span class="st">&quot;ecthrpos/pubsupport&quot;</span>)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;deltaMethod&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#require(car,quietly=TRUE)</span>
+<span class="co">#deltaMethod(d.lm,&quot;ecthrpos/pubsupport&quot;)</span></code></pre>
 </div>
 </section>
 <section id="linear-functions" class="slide level1">

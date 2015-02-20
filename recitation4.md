@@ -114,24 +114,8 @@ c(estimate=est,std.error=se)
 ```
 
 ```r
-require(car)
-```
-
-```
-## Loading required package: car
-```
-
-```
-## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called 'car'
-```
-
-```r
-deltaMethod(d.lm,"ecthrpos/pubsupport")
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "deltaMethod"
+#require(car,quietly=TRUE)
+#deltaMethod(d.lm,"ecthrpos/pubsupport")
 ```
 
 # Linear Functions

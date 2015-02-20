@@ -78,8 +78,8 @@ grad
 se<-sqrt(t(grad)%*%vcov(d.lm)[2:3,2:3]%*%grad)
 est<-coef(d.lm)[2]/coef(d.lm)[3]
 c(estimate=est,std.error=se)
-require(car,quietly=TRUE)
-deltaMethod(d.lm,"ecthrpos/pubsupport")
+#require(car,quietly=TRUE)
+#deltaMethod(d.lm,"ecthrpos/pubsupport")
 ```
 
 # Linear Functions
