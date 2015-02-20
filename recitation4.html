@@ -158,8 +158,10 @@ est&lt;-<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span clas
 <span class="kw">c</span>(<span class="dt">estimate=</span>est,<span class="dt">std.error=</span>se)</code></pre>
 <pre><code>## estimate.ecthrpos         std.error 
 ##          24.08941          35.32946</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#require(car,quietly=TRUE)</span>
-<span class="co">#deltaMethod(d.lm,&quot;ecthrpos/pubsupport&quot;)</span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
+<span class="kw">deltaMethod</span>(d.lm,<span class="st">&quot;ecthrpos/pubsupport&quot;</span>)</code></pre>
+<pre><code>##                     Estimate       SE
+## ecthrpos/pubsupport 24.08941 35.54775</code></pre>
 </div>
 </section>
 <section id="linear-functions" class="slide level1">
@@ -195,11 +197,10 @@ est&lt;-<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span clas
 <li>Outcome is log(GDP) in 1995</li>
 </ul>
 <div class="fragment">
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign)
-dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;maketable5.dta&quot;</span>)</code></pre>
-<pre><code>## Error in read.dta(&quot;maketable5.dta&quot;): unable to open file: &#39;No such file or directory&#39;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw">subset</span>(dat, baseco==<span class="dv">1</span>)</code></pre>
-<pre><code>## Error in subset(dat, baseco == 1): object &#39;dat&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
+dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;table_5.dta&quot;</span>)
+dat &lt;-<span class="st"> </span><span class="kw">subset</span>(dat, baseco==<span class="dv">1</span>)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;baseco&#39; not found</code></pre>
 </div>
 </section>
 <section id="estimate-iv-via-2sls" class="slide level1">
@@ -209,15 +210,12 @@ dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="
 <pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
 ## logical.return = TRUE, : there is no package called &#39;AER&#39;</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r">first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)</code></pre>
-<pre><code>## Error in is.data.frame(data): object &#39;dat&#39; not found</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;avexpr&#39; not found</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r">iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)</code></pre>
 <pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)</code></pre>
-<pre><code>## Loading required package: car</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;car&#39;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">linearHypothesis</span>(first,<span class="st">&quot;logem4&quot;</span>,<span class="dt">test=</span><span class="st">&quot;F&quot;</span>)</code></pre>
-<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;linearHypothesis&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)
+<span class="kw">linearHypothesis</span>(first,<span class="st">&quot;logem4&quot;</span>,<span class="dt">test=</span><span class="st">&quot;F&quot;</span>)</code></pre>
+<pre><code>## Error in linearHypothesis(first, &quot;logem4&quot;, test = &quot;F&quot;): object &#39;first&#39; not found</code></pre>
 </section>
 <section id="examine-output" class="slide level1">
 <h1>Examine Output</h1>
@@ -235,23 +233,20 @@ dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="
 <li>This defines a sensitivity analysis on the exclusion restriction.</li>
 <li>Subject to an assumption about the support of <span class="math">\(\gamma\)</span>, they suggest estimating in a grid over this domain, and then taking the union of the confidence intervals for each value of <span class="math">\(\gamma\)</span> as the combined confidence interval (which will cover).</li>
 </ul>
-<div class="fragment">
+</section>
+<section id="sensitivity-analysis-code" class="slide level1">
+<h1>Sensitivity Analysis code</h1>
 <pre class="sourceCode r"><code class="sourceCode r">gamma &lt;-<span class="st"> </span><span class="kw">seq</span>(-<span class="dv">1</span>,<span class="dv">1</span>,.<span class="dv">25</span>)
 ExclSens &lt;-<span class="st"> </span>function(g) {
   newY &lt;-<span class="st"> </span>dat$logpgp95 -<span class="st"> </span>g*dat$logem4
   <span class="kw">coef</span>(<span class="kw">ivreg</span>(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,<span class="kw">cbind</span>(dat,newY)))[<span class="dv">2</span>]
 }
 sens.coefs &lt;-<span class="st"> </span><span class="kw">sapply</span>(gamma,ExclSens)</code></pre>
-<pre><code>## Note: no visible binding for global variable &#39;dat&#39; 
-## Note: no visible binding for global variable &#39;dat&#39; 
-## Note: no visible global function definition for &#39;ivreg&#39; 
-## Note: no visible binding for global variable &#39;dat&#39;</code></pre>
-<pre><code>## Error in FUN(c(-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1)[[1L]], ...): object &#39;dat&#39; not found</code></pre>
+<pre><code>## Error in coef(ivreg(newY ~ avexpr + f_brit + f_french, ~logem4 + f_brit + : could not find function &quot;ivreg&quot;</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">names</span>(sens.coefs)&lt;-<span class="st"> </span><span class="kw">round</span>(gamma,<span class="dv">3</span>)</code></pre>
 <pre><code>## Error in names(sens.coefs) &lt;- round(gamma, 3): object &#39;sens.coefs&#39; not found</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(sens.coefs,<span class="dv">3</span>)</code></pre>
 <pre><code>## Error in eval(expr, envir, enclos): object &#39;sens.coefs&#39; not found</code></pre>
-</div>
 </section>
 <section id="more-iv-stuff" class="slide level1">
 <h1>More IV Stuff</h1>

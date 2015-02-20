@@ -114,8 +114,13 @@ c(estimate=est,std.error=se)
 ```
 
 ```r
-#require(car,quietly=TRUE)
-#deltaMethod(d.lm,"ecthrpos/pubsupport")
+require(car,quietly=TRUE)
+deltaMethod(d.lm,"ecthrpos/pubsupport")
+```
+
+```
+##                     Estimate       SE
+## ecthrpos/pubsupport 24.08941 35.54775
 ```
 
 # Linear Functions
@@ -148,20 +153,13 @@ where $\eta$ is the error in the structural model and $\xi$ is the error in the 
 
 
 ```r
-require(foreign)
-dat <- read.dta("maketable5.dta")
-```
-
-```
-## Error in read.dta("maketable5.dta"): unable to open file: 'No such file or directory'
-```
-
-```r
+require(foreign,quietly=TRUE)
+dat <- read.dta("table_5.dta")
 dat <- subset(dat, baseco==1)
 ```
 
 ```
-## Error in subset(dat, baseco == 1): object 'dat' not found
+## Error in eval(expr, envir, enclos): object 'baseco' not found
 ```
 
 # Estimate IV via 2SLS
@@ -185,7 +183,7 @@ first <- lm(avexpr~logem4+f_brit+f_french,dat)
 ```
 
 ```
-## Error in is.data.frame(data): object 'dat' not found
+## Error in eval(expr, envir, enclos): object 'avexpr' not found
 ```
 
 ```r
@@ -198,23 +196,11 @@ iv2sls<-ivreg(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)
 
 ```r
 require(car)
-```
-
-```
-## Loading required package: car
-```
-
-```
-## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called 'car'
-```
-
-```r
 linearHypothesis(first,"logem4",test="F")
 ```
 
 ```
-## Error in eval(expr, envir, enclos): could not find function "linearHypothesis"
+## Error in linearHypothesis(first, "logem4", test = "F"): object 'first' not found
 ```
 
 # Examine Output
@@ -238,7 +224,7 @@ $Y = X\beta + Z\gamma + \epsilon$
 - This defines a sensitivity analysis on the exclusion restriction.
 - Subject to an assumption about the support of $\gamma$, they suggest estimating in a grid over this domain, and then taking the union of the confidence intervals for each value of $\gamma$ as the combined confidence interval (which will cover).
 
-. . .
+# Sensitivity Analysis code
 
 
 ```r
@@ -251,14 +237,7 @@ sens.coefs <- sapply(gamma,ExclSens)
 ```
 
 ```
-## Note: no visible binding for global variable 'dat' 
-## Note: no visible binding for global variable 'dat' 
-## Note: no visible global function definition for 'ivreg' 
-## Note: no visible binding for global variable 'dat'
-```
-
-```
-## Error in FUN(c(-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1)[[1L]], ...): object 'dat' not found
+## Error in coef(ivreg(newY ~ avexpr + f_brit + f_french, ~logem4 + f_brit + : could not find function "ivreg"
 ```
 
 ```r

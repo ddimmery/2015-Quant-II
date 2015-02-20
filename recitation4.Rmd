@@ -78,8 +78,8 @@ grad
 se<-sqrt(t(grad)%*%vcov(d.lm)[2:3,2:3]%*%grad)
 est<-coef(d.lm)[2]/coef(d.lm)[3]
 c(estimate=est,std.error=se)
-#require(car,quietly=TRUE)
-#deltaMethod(d.lm,"ecthrpos/pubsupport")
+require(car,quietly=TRUE)
+deltaMethod(d.lm,"ecthrpos/pubsupport")
 ```
 
 # Linear Functions
@@ -111,8 +111,8 @@ where $\eta$ is the error in the structural model and $\xi$ is the error in the 
 . . .
 
 ```{r 6-col-orig-data}
-require(foreign)
-dat <- read.dta("maketable5.dta")
+require(foreign,quietly=TRUE)
+dat <- read.dta("table_5.dta")
 dat <- subset(dat, baseco==1)
 ```
 
@@ -142,7 +142,7 @@ $Y = X\beta + Z\gamma + \epsilon$
 - This defines a sensitivity analysis on the exclusion restriction.
 - Subject to an assumption about the support of $\gamma$, they suggest estimating in a grid over this domain, and then taking the union of the confidence intervals for each value of $\gamma$ as the combined confidence interval (which will cover).
 
-. . .
+# Sensitivity Analysis code
 
 ```{r 6-iv-sens}
 gamma <- seq(-1,1,.25)
