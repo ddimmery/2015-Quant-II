@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Drew Dimmery drewd@nyu.edu" />
+  <meta name="dcterms.date" content="2015-02-20" />
+  <title>Instrumental Variables</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="reveal.js/css/reveal.min.css"/>
+    <style type="text/css">code{white-space: pre;}</style>
+    <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+    </style>
+    <link rel="stylesheet" href="reveal.js/css/theme/simple.css" id="theme">
+    <!-- If the query includes 'print-pdf', include the PDF print sheet -->
+    <script>
+      if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+      }
+    </script>
+    <!--[if lt IE 9]>
+    <script src="reveal.js/lib/js/html5shiv.js"></script>
+    <![endif]-->
+    <script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+    <h1 class="title">Instrumental Variables</h1>
+    <h2 class="author">Drew Dimmery <script type="text/javascript">
+<!--
+h='&#110;&#x79;&#x75;&#46;&#x65;&#100;&#x75;';a='&#64;';n='&#100;&#114;&#x65;&#x77;&#100;';e=n+a+h;
+document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\/'+'a'+'>');
+// -->
+</script><noscript>&#100;&#114;&#x65;&#x77;&#100;&#32;&#x61;&#116;&#32;&#110;&#x79;&#x75;&#32;&#100;&#x6f;&#116;&#32;&#x65;&#100;&#x75;</noscript></h2>
+    <h3 class="date">February 20, 2015</h3>
+</section>
+
+<section id="debugging" class="slide level1">
+<h1>Debugging</h1>
+<ul>
+<li>Rubber duck debugging:
+<ul>
+<li>Use when you can’t figure out why your code doesn’t work right</li>
+<li>Find something inanimate to talk to</li>
+<li>Explain what your code does, line by excruciating line</li>
+<li>If you can’t explain it, that’s probably where the problem is.</li>
+<li>This works ridiculously well.</li>
+<li>You should also be able to tell your duck exactly what is stored in each variable at all times.</li>
+</ul></li>
+<li>Check individual elements of your code on small data such that you know what the right answer <em>should</em> be.</li>
+</ul>
+</section>
+<section id="introduce-an-example" class="slide level1">
+<h1>Introduce an Example</h1>
+<ul>
+<li>We’ll be working with data from a paper in the most recent issue of IO.</li>
+<li>Helfer, L.R. and E. Voeten. (2014) “International Courts as Agents of Legal Change: Evidence from LGBT Rights in Europe”</li>
+<li>The treatment we are interested in is the presence of absence of a ECtHR judgment.</li>
+<li>The outcome is the adoption of progressive LGBT policy.</li>
+<li>And there’s a battery of controls, of course.</li>
+<li>Voeten has helpfully put all <a href="http://hdl.handle.net/1902.1/19324">replication materials online</a>.</li>
+</ul>
+</section>
+<section id="prepare-example" class="slide level1">
+<h1>Prepare example</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
+d &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;replicationdataIOLGBT.dta&quot;</span>)</code></pre>
+<pre><code>## Error in read.dta(&quot;replicationdataIOLGBT.dta&quot;): unable to open file: &#39;No such file or directory&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Base specification</span>
+d$ecthrpos &lt;-<span class="st"> </span><span class="kw">as.double</span>(d$ecthrpos)-<span class="dv">1</span></code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d &lt;-<span class="st"> </span>d[-d.lm$na.action,]</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d$issue &lt;-<span class="st"> </span><span class="kw">as.factor</span>(d$issue)</code></pre>
+<pre><code>## Error in is.factor(x): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d$ccode &lt;-<span class="st"> </span><span class="kw">as.factor</span>(d$ccode)</code></pre>
+<pre><code>## Error in is.factor(x): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(d.lm)$coefficients[<span class="dv">1</span>:<span class="dv">11</span>,]</code></pre>
+<pre><code>## Error in summary(d.lm): object &#39;d.lm&#39; not found</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;d&#39; not found</code></pre>
+</section>
+<section id="marginal-effects" class="slide level1">
+<h1>Marginal Effects</h1>
+<ul>
+<li><a href="http://chrisblattman.com/projects/sway/">Blattman (2009)</a> uses marginal effects “well” in the sense of causal inference.</li>
+<li>Use the builtin <code>predict</code> function; it will make your life easier.</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">d.lm.interact &lt;-<span class="st"> </span><span class="kw">lm</span>(policy~ecthrpos*pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">frame0 &lt;-<span class="st"> </span>frame1 &lt;-<span class="st"> </span><span class="kw">model.frame</span>(d.lm.interact)</code></pre>
+<pre><code>## Error in model.frame(d.lm.interact): object &#39;d.lm.interact&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">frame0[,<span class="st">&quot;ecthrpos&quot;</span>] &lt;-<span class="st"> </span><span class="dv">0</span></code></pre>
+<pre><code>## Error in frame0[, &quot;ecthrpos&quot;] &lt;- 0: object &#39;frame0&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">frame1[,<span class="st">&quot;ecthrpos&quot;</span>] &lt;-<span class="st"> </span><span class="dv">1</span></code></pre>
+<pre><code>## Error in frame1[, &quot;ecthrpos&quot;] &lt;- 1: object &#39;frame1&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">meff &lt;-<span class="st"> </span><span class="kw">mean</span>(<span class="kw">predict</span>(d.lm.interact,<span class="dt">newd=</span>frame1) -<span class="st"> </span><span class="kw">predict</span>(d.lm.interact,<span class="dt">newd=</span>frame0))</code></pre>
+<pre><code>## Error in predict(d.lm.interact, newd = frame1): object &#39;d.lm.interact&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">meff</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;meff&#39; not found</code></pre>
+<ul>
+<li>Why might this be preferable to “setting things at their means/medians”?</li>
+<li>It’s essentially integrating over the sample’s distribution of observed characteristics.</li>
+<li>(And if the sample is a SRS from the population [or survey weights make it LOOK like it is], this will then get you the marginal effect on the population of interest)</li>
+</ul>
+</div>
+</section>
+<section id="delta-method" class="slide level1">
+<h1>Delta Method</h1>
+<ul>
+<li>Note 1: We know that our vector of coefficients are asymptotically multivariate normal.</li>
+<li>Note 2: We can approximate the distribution of many (not just linear) functions of these coefficients using the delta method.</li>
+<li>Delta method says that you can approximate the distribution of <span class="math">\(h(b_n)\)</span> with <span class="math">\(\bigtriangledown{h}(b)&#39;\Omega\bigtriangledown{h}(b)\)</span> Where <span class="math">\(\Omega\)</span> is the asymptotic variance of <span class="math">\(b\)</span>.</li>
+<li>In practice, this means that we just need to be able to derive the function whose distribution we wish to approximate.</li>
+</ul>
+</section>
+<section id="trivial-example" class="slide level1">
+<h1>Trivial Example</h1>
+<ul>
+<li>Maybe we’re interested in the ratio of the coefficient on <code>ecthrpos</code> to that of <code>pubsupport</code>.</li>
+<li>Call it <span class="math">\(b_2 \over b_3\)</span>. The gradient is <span class="math">\((\frac{1}{b_3}, \frac{b_2}{b_3^2})\)</span></li>
+<li>Estimate this easily in R with:</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">grad&lt;-<span class="kw">c</span>(<span class="dv">1</span>/<span class="kw">coef</span>(d.lm)[<span class="dv">3</span>],<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span class="kw">coef</span>(d.lm)[<span class="dv">3</span>]^<span class="dv">2</span>)</code></pre>
+<pre><code>## Error in coef(d.lm): object &#39;d.lm&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">grad</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;grad&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">se&lt;-<span class="kw">sqrt</span>(<span class="kw">t</span>(grad)%*%<span class="kw">vcov</span>(d.lm)[<span class="dv">2</span>:<span class="dv">3</span>,<span class="dv">2</span>:<span class="dv">3</span>]%*%grad)</code></pre>
+<pre><code>## Error in t(grad): object &#39;grad&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">est&lt;-<span class="kw">coef</span>(d.lm)[<span class="dv">2</span>]/<span class="kw">coef</span>(d.lm)[<span class="dv">3</span>]</code></pre>
+<pre><code>## Error in coef(d.lm): object &#39;d.lm&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">c</span>(<span class="dt">estimate=</span>est,<span class="dt">std.error=</span>se)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;est&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)</code></pre>
+<pre><code>## Loading required package: car</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;car&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deltaMethod</span>(d.lm,<span class="st">&quot;ecthrpos/pubsupport&quot;</span>)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;deltaMethod&quot;</code></pre>
+</div>
+</section>
+<section id="linear-functions" class="slide level1">
+<h1>Linear Functions</h1>
+<ul>
+<li>But for most “marginal effects”, you don’t need to use the delta method.</li>
+<li>Just remember your rules for variances.</li>
+<li><span class="math">\(\text{var}(aX+bY) = a^2\text{var}(X) + b^2\text{var}(Y) + 2ab\text{cov}(X,Y)\)</span></li>
+<li>If you are just looking at changes with respect to a single variable, you can just multiply standard errors.</li>
+<li>That is, a change in a variable of 3 units means that the standard error for the marginal effect would be 3 times the standard error of the coefficient.</li>
+<li>This isn’t what Clarify does, though.</li>
+</ul>
+</section>
+<section id="instrumental-variables" class="slide level1">
+<h1>Instrumental Variables</h1>
+<ul>
+<li><span class="math">\(\rho = {\text{Cov}(Y_i,Z_i) \over \text{Cov}(S_i,Z_i)} = { { \text{Cov}(Y_i,Z_i) \over \text{Var}(Z_i)} \over {\text{Cov}(S_i,Z_i) \over \text{Var}(Z_i)}} = {\text{Reduced form} \over \text{First stage}}\)</span></li>
+<li>If we have a perfect instrument, this will be unbiased.</li>
+<li>But bias is a function of both violation of exclusion restriction and of strength of first stage.</li>
+<li>2SLS has finite sample bias. (Cyrus showed this, but didn’t dwell on it)</li>
+<li>In particular, it <a href="http://econ.lse.ac.uk/staff/spischke/ec533/Weak%20IV.pdf">can be shown</a> that this bias “is”:<br /><span class="math">\({\sigma_{\eta \xi} \over \sigma_{\xi}^2}{1 \over F + 1}\)</span><br />where <span class="math">\(\eta\)</span> is the error in the structural model and <span class="math">\(\xi\)</span> is the error in the first stage.</li>
+<li>With an irrelevant instrument (<span class="math">\(F=0\)</span>), the bias is equal to that of OLS (regression of <span class="math">\(Y\)</span> on <span class="math">\(X\)</span>).</li>
+<li>There are some bias corrections for this, we might talk about this next week.</li>
+</ul>
+</section>
+<section id="setup-iv-example" class="slide level1">
+<h1>Setup IV example</h1>
+<ul>
+<li>For our example with IV, we will start with AJR (2001) - Colonial Origins of Comparative Development</li>
+<li>Treatment is average protection from expropriation</li>
+<li>Exogenous covariates are dummies for British/French colonial presence</li>
+<li>Instrument is settler mortality</li>
+<li>Outcome is log(GDP) in 1995</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign)
+dat &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;maketable5.dta&quot;</span>)</code></pre>
+<pre><code>## Error in read.dta(&quot;maketable5.dta&quot;): unable to open file: &#39;No such file or directory&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw">subset</span>(dat, baseco==<span class="dv">1</span>)</code></pre>
+<pre><code>## Error in subset(dat, baseco == 1): object &#39;dat&#39; not found</code></pre>
+</div>
+</section>
+<section id="estimate-iv-via-2sls" class="slide level1">
+<h1>Estimate IV via 2SLS</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(AER)</code></pre>
+<pre><code>## Loading required package: AER</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;AER&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">first &lt;-<span class="st"> </span><span class="kw">lm</span>(avexpr~logem4+f_brit+f_french,dat)</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;dat&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">iv2sls&lt;-<span class="kw">ivreg</span>(logpgp95~avexpr+f_brit+f_french,~logem4+f_brit+f_french,dat)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(car)</code></pre>
+<pre><code>## Loading required package: car</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;car&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">linearHypothesis</span>(first,<span class="st">&quot;logem4&quot;</span>,<span class="dt">test=</span><span class="st">&quot;F&quot;</span>)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;linearHypothesis&quot;</code></pre>
+</section>
+<section id="examine-output" class="slide level1">
+<h1>Examine Output</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(iv2sls)</code></pre>
+<pre><code>## Error in summary(iv2sls): object &#39;iv2sls&#39; not found</code></pre>
+</section>
+<section id="sensitivity-analysis" class="slide level1">
+<h1>Sensitivity Analysis</h1>
+<ul>
+<li>Conley, Hansen and Rossi (2012)</li>
+<li>Suppose that the exclusion restriction does NOT hold, and there exists a direct effect from the instrument to the outcome.</li>
+<li>That is, the structural model is:<br /><span class="math">\(Y = X\beta + Z\gamma + \epsilon\)</span></li>
+<li>If <span class="math">\(\gamma\)</span> is zero, the exclusion restriction holds (we’re in a structural framework)</li>
+<li>We can assume a particular value of <span class="math">\(\gamma\)</span>, take <span class="math">\(\tilde{Y} = Y - Z\gamma\)</span> and estimate our model, gaining an estimate of <span class="math">\(\beta\)</span>.</li>
+<li>This defines a sensitivity analysis on the exclusion restriction.</li>
+<li>Subject to an assumption about the support of <span class="math">\(\gamma\)</span>, they suggest estimating in a grid over this domain, and then taking the union of the confidence intervals for each value of <span class="math">\(\gamma\)</span> as the combined confidence interval (which will cover).</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">gamma &lt;-<span class="st"> </span><span class="kw">seq</span>(-<span class="dv">1</span>,<span class="dv">1</span>,.<span class="dv">25</span>)
+ExclSens &lt;-<span class="st"> </span>function(g) {
+  newY &lt;-<span class="st"> </span>dat$logpgp95 -<span class="st"> </span>g*dat$logem4
+  <span class="kw">coef</span>(<span class="kw">ivreg</span>(newY~avexpr+f_brit+f_french,~logem4+f_brit+f_french,<span class="kw">cbind</span>(dat,newY)))[<span class="dv">2</span>]
+}
+sens.coefs &lt;-<span class="st"> </span><span class="kw">sapply</span>(gamma,ExclSens)</code></pre>
+<pre><code>## Note: no visible binding for global variable &#39;dat&#39; 
+## Note: no visible binding for global variable &#39;dat&#39; 
+## Note: no visible global function definition for &#39;ivreg&#39; 
+## Note: no visible binding for global variable &#39;dat&#39;</code></pre>
+<pre><code>## Error in FUN(c(-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1)[[1L]], ...): object &#39;dat&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">names</span>(sens.coefs)&lt;-<span class="st"> </span><span class="kw">round</span>(gamma,<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in names(sens.coefs) &lt;- round(gamma, 3): object &#39;sens.coefs&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(sens.coefs,<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): object &#39;sens.coefs&#39; not found</code></pre>
+</div>
+</section>
+<section id="more-iv-stuff" class="slide level1">
+<h1>More IV Stuff</h1>
+<ul>
+<li>We’re going to be looking at <a href="http://www.aeaweb.org/articles.php?doi=10.1257/app.3.2.34">Ananat (2011)</a> in AEJ</li>
+<li>This study looks at the effect of racial segregation on economic outcomes.</li>
+<li>Outcome: Poverty rate &amp; Inequality (Gini index)</li>
+<li>Treatment: Segregation</li>
+<li>Instrument: “railroad division index”</li>
+<li>Main covariate of note: railroad length in a town</li>
+<li>I’m dichotomizing treatment and instrument for simplicity.</li>
+<li>And my outcomes are for the Black subsample</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign)
+d&lt;-<span class="kw">read.dta</span>(<span class="st">&quot;aej_maindata.dta&quot;</span>)</code></pre>
+<pre><code>## Error in read.dta(&quot;aej_maindata.dta&quot;): unable to open file: &#39;No such file or directory&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d$herf_b&lt;-<span class="kw">with</span>(d,<span class="kw">ifelse</span>(herf &gt;=<span class="st"> </span><span class="kw">quantile</span>(herf,.<span class="dv">5</span>),<span class="dv">1</span>,<span class="dv">0</span>))</code></pre>
+<pre><code>## Error in with(d, ifelse(herf &gt;= quantile(herf, 0.5), 1, 0)): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d$dism1990_b&lt;-<span class="kw">with</span>(d,<span class="kw">ifelse</span>(dism1990 &gt;=<span class="st"> </span><span class="kw">quantile</span>(dism1990,.<span class="dv">5</span>),<span class="dv">1</span>,<span class="dv">0</span>))</code></pre>
+<pre><code>## Error in with(d, ifelse(dism1990 &gt;= quantile(dism1990, 0.5), 1, 0)): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">first.stage &lt;-<span class="st"> </span><span class="kw">lm</span>(dism1990~herf+lenper,d)</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">first.stage.b &lt;-<span class="st"> </span><span class="kw">lm</span>(dism1990_b~herf_b+lenper,d)</code></pre>
+<pre><code>## Error in is.data.frame(data): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(AER)</code></pre>
+<pre><code>## Loading required package: AER</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;AER&#39;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">gini.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990+lenper,~herf+lenper,d)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">gini.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(lngini_b~dism1990_b+lenper,~herf_b+lenper,d)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">pov.iv &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990+lenper,~herf+lenper,d)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">pov.iv.b &lt;-<span class="st"> </span><span class="kw">ivreg</span>(povrate_b~dism1990_b+lenper,~herf_b+lenper,d)</code></pre>
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;ivreg&quot;</code></pre>
+</div>
+</section>
+<section id="base-results" class="slide level1">
+<h1>Base Results</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(first.stage)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(first.stage): object &#39;first.stage&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(first.stage.b)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(first.stage.b): object &#39;first.stage.b&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(gini.iv)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(gini.iv): object &#39;gini.iv&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(gini.iv.b)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(gini.iv.b): object &#39;gini.iv.b&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(pov.iv)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(pov.iv): object &#39;pov.iv&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">round</span>(<span class="kw">summary</span>(pov.iv.b)$coefficients[<span class="dv">2</span>,],<span class="dv">3</span>)</code></pre>
+<pre><code>## Error in summary(pov.iv.b): object &#39;pov.iv.b&#39; not found</code></pre>
+</section>
+<section id="abadies-kappa" class="slide level1">
+<h1>Abadie’s <span class="math">\(\kappa\)</span></h1>
+<ul>
+<li>Recall from the lecture that we can use a weighting scheme to calculate statistics on the compliant population.</li>
+<li><span class="math">\(E[g(Y,D,X)|D_1 &gt; D_0] = {1 \over p(D_1&gt;D_0)} E[\kappa g(Y,D,X)]\)</span></li>
+<li><span class="math">\(\kappa = 1 - {D_i (1-Z_i) \over p(Z_i =0|X)} - {(1-D_i)Z_i \over p(Z_i =1|X)}\)</span></li>
+<li><span class="math">\(E[\kappa|X] = E[D_1 -D_0|X] = E[D|X,Z=1] - E[D|X,Z=0]\)</span></li>
+<li>Take <span class="math">\(w_i = {\kappa_i \over E[D_{1}-D_{0}|X_i]}\)</span></li>
+<li>Use this in calculating any interesting statistics (means, variance, etc)</li>
+<li>This let’s you explore the units composing your LATE.</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">getKappaWt&lt;-function(D,Z) {
+  pz &lt;-<span class="st"> </span><span class="kw">mean</span>(Z)
+  pcomp &lt;-<span class="st"> </span><span class="kw">mean</span>(D[Z==<span class="dv">1</span>]) -<span class="st"> </span><span class="kw">mean</span>(D[Z==<span class="dv">0</span>])
+  if(pcomp &lt;<span class="st"> </span><span class="dv">0</span>) <span class="kw">stop</span>(<span class="st">&quot;Assuming p(D|Z) &gt; .5&quot;</span>)
+  kappa &lt;-<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span>D*(<span class="dv">1</span>-Z)/(<span class="dv">1</span>-pz) -<span class="st"> </span>(<span class="dv">1</span>-D)*Z/pz
+  <span class="co"># Note that pcomp = mean(kappa)</span>
+  kappa /<span class="st"> </span>pcomp
+}
+w &lt;-<span class="st"> </span><span class="kw">with</span>(d,<span class="kw">getKappaWt</span>(<span class="dt">D=</span>dism1990_b,<span class="dt">Z=</span>herf_b))</code></pre>
+<pre><code>## Error in with(d, getKappaWt(D = dism1990_b, Z = herf_b)): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">varlist &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;closeness&quot;</span>,<span class="st">&quot;area1910&quot;</span>,<span class="st">&quot;ctyliterate1920&quot;</span>,<span class="st">&quot;hsdrop_b&quot;</span>,<span class="st">&quot;manshr&quot;</span>,<span class="st">&quot;ctymanuf_wkrs1920&quot;</span>,<span class="st">&quot;ngov62&quot;</span>)
+samp.stats&lt;-<span class="kw">sapply</span>(varlist,function(v) <span class="kw">mean</span>(d[,v],<span class="dt">na.rm=</span><span class="ot">TRUE</span>))</code></pre>
+<pre><code>## Note: no visible binding for global variable &#39;d&#39;</code></pre>
+<pre><code>## Error in mean(d[, v], na.rm = TRUE): object &#39;d&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">comp.stats&lt;-<span class="kw">sapply</span>(varlist,function(v) <span class="kw">weighted.mean</span>(d[,v],w,<span class="dt">na.rm=</span><span class="ot">TRUE</span>))</code></pre>
+<pre><code>## Note: no visible binding for global variable &#39;d&#39; 
+## Note: no visible binding for global variable &#39;w&#39;</code></pre>
+<pre><code>## Error in weighted.mean(d[, v], w, na.rm = TRUE): object &#39;d&#39; not found</code></pre>
+</div>
+</section>
+<section id="examine-complier-statistics" class="slide level1">
+<h1>Examine Complier Statistics</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(w)</code></pre>
+<pre><code>## Error in summary(w): object &#39;w&#39; not found</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">rbind</span>(<span class="dt">sample=</span>samp.stats,<span class="dt">compliers=</span>comp.stats)</code></pre>
+<pre><code>## Error in rbind(sample = samp.stats, compliers = comp.stats): object &#39;samp.stats&#39; not found</code></pre>
+</section>
+    </div>
+  </div>
+
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.min.js"></script>
+
+  <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } },
+//          { src: 'reveal.js/plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; }, }
+//          { src: 'reveal.js/plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+]});
+    </script>
+    </body>
+</html>
