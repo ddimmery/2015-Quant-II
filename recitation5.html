@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Drew Dimmery drewd@nyu.edu" />
+  <meta name="dcterms.date" content="2015-02-26" />
+  <title>Bias</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="reveal.js/css/reveal.min.css"/>
+    <style type="text/css">code{white-space: pre;}</style>
+    <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+    </style>
+    <link rel="stylesheet" href="reveal.js/css/theme/simple.css" id="theme">
+    <!-- If the query includes 'print-pdf', include the PDF print sheet -->
+    <script>
+      if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+      }
+    </script>
+    <!--[if lt IE 9]>
+    <script src="reveal.js/lib/js/html5shiv.js"></script>
+    <![endif]-->
+    <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+    <h1 class="title">Bias</h1>
+    <h2 class="author">Drew Dimmery <script type="text/javascript">
+<!--
+h='&#110;&#x79;&#x75;&#46;&#x65;&#100;&#x75;';a='&#64;';n='&#100;&#114;&#x65;&#x77;&#100;';e=n+a+h;
+document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\/'+'a'+'>');
+// -->
+</script><noscript>&#100;&#114;&#x65;&#x77;&#100;&#32;&#x61;&#116;&#32;&#110;&#x79;&#x75;&#32;&#100;&#x6f;&#116;&#32;&#x65;&#100;&#x75;</noscript></h2>
+    <h3 class="date">February 26, 2015</h3>
+</section>
+
+<section id="measurement-error-sim" class="slide level1">
+<h1>Measurement Error Sim</h1>
+<pre class="sourceCode r"><code class="sourceCode r">Dstar &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>)
+D &lt;-<span class="st"> </span><span class="kw">ifelse</span>(Dstar &gt;<span class="st"> </span><span class="dv">0</span>, <span class="dv">1</span> , <span class="dv">0</span>)
+Y &lt;-<span class="st"> </span><span class="dv">10</span> +<span class="st"> </span><span class="dv">5</span>*D +<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>,<span class="dv">0</span>,<span class="dv">2</span>)
+simME &lt;-<span class="st"> </span>function(stdev) {
+  Dnew &lt;-<span class="st"> </span><span class="kw">ifelse</span>(Dstar +<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>,<span class="dv">0</span>,stdev) &gt;<span class="st"> </span><span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>)
+  <span class="kw">mean</span>(Y[Dnew==<span class="dv">1</span>]) -<span class="st"> </span><span class="kw">mean</span>(Y[Dnew==<span class="dv">0</span>])
+}
+sdevs &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.01</span>,<span class="dv">20</span>,.<span class="dv">1</span>)
+eff &lt;-<span class="st"> </span><span class="kw">sapply</span>(sdevs,simME)</code></pre>
+</section>
+<section id="plot-it" class="slide level1">
+<h1>Plot it</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(sdevs,eff,<span class="dt">xlab=</span><span class="st">&#39;Amount of Measurement Error&#39;</span>,<span class="dt">ylab=</span><span class="st">&#39;Estimated Effect&#39;</span>,<span class="dt">pch=</span><span class="dv">19</span>)</code></pre>
+<figure>
+<img src="figure/5-meas-error-plot-1.png" />
+</figure>
+</section>
+<section id="sensitivity-analysis" class="slide level1">
+<h1>Sensitivity Analysis</h1>
+<ul>
+<li>I’m going to walk you through how to do a generalized version of the Imbens (2003) method.</li>
+<li>It may be easier to use one of the canned routines for your homework, though.</li>
+<li>We’re going to keep working with Pat’s data, since we already have it handy.</li>
+<li>Imbens process:
+<ul>
+<li>Simulate (or imagine simulating) an unobserved confounder like the following:<br /><span class="math">\(Y_d | X, U \sim \mathcal{N}(\tau d + \boldsymbol\beta&#39;X + \delta U, \sigma^2)\)</span><br /><span class="math">\(D | X, U \sim f(\boldsymbol\gamma&#39;X + \alpha U)\)</span> (with <span class="math">\(f\)</span> known)</li>
+<li>That is, <span class="math">\(Y_1, Y_0 \perp D | X, U\)</span></li>
+<li>So we want to generate an additively linear confounder with both <span class="math">\(D\)</span> and <span class="math">\(Y\)</span>.</li>
+</ul></li>
+</ul>
+</section>
+<section id="example" class="slide level1">
+<h1>Example</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign)
+d &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;gwdataset.dta&quot;</span>)</code></pre>
+<pre><code>## Warning in read.dta(&quot;gwdataset.dta&quot;): value labels (&#39;q2&#39;) for &#39;jan07_q2&#39;
+## are missing</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">zips &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;zipcodetostate.dta&quot;</span>)
+zips&lt;-<span class="kw">unique</span>(zips[,<span class="kw">c</span>(<span class="st">&quot;statenum&quot;</span>,<span class="st">&quot;statefromzipfile&quot;</span>)])
+pops &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;population_ests_2013.csv&quot;</span>)
+pops$state &lt;-<span class="st"> </span><span class="kw">tolower</span>(pops$NAME)
+d$getwarmord &lt;-<span class="st"> </span><span class="kw">as.double</span>(d$getwarmord)
+<span class="co"># And estimate primary model of interest:</span>
+out&lt;-<span class="kw">lm</span>(getwarmord~ddt_week+educ_hsless+educ_coll+educ_postgrad+educ_dk+party_rep+party_leanrep+party_leandem+party_dem+male+raceeth_black+raceeth_hisp+raceeth_notwbh+raceeth_dkref+age_1824+age_2534+age_3544+age_5564+age_65plus+age_dk+ideo_vcons+ideo_conservative+ideo_liberal+ideo_vlib+ideo_dk+attend_1+attend_2+attend_3+attend_5+attend_6+attend_9+<span class="kw">as.factor</span>(doi)+<span class="kw">as.factor</span>(statenum)+<span class="kw">as.factor</span>(wbnid_num),d)</code></pre>
+</section>
+<section id="generate-a-confounder" class="slide level1">
+<h1>Generate a confounder</h1>
+<ul>
+<li>For our analysis, <span class="math">\(Y\)</span> is belief in global warming and <span class="math">\(D\)</span> is local variation in temperature.</li>
+<li>We want to standardize these variables first.</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">d$getwarmord &lt;-<span class="st"> </span><span class="kw">scale</span>(d$getwarmord)
+d$ddt_week &lt;-<span class="st"> </span><span class="kw">scale</span>(d$ddt_week)
+genConfound&lt;-function(alpha,delta) {
+  e &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">nrow</span>(d),<span class="dv">0</span>,<span class="dv">1</span>)
+  U &lt;-<span class="st"> </span>alpha *<span class="st"> </span>d$ddt_week +<span class="st"> </span>delta *<span class="st"> </span>d$getwarmord +<span class="st"> </span>e
+  <span class="kw">return</span>(U)
+}</code></pre>
+</div>
+<div class="fragment">
+<ul>
+<li>So we can vary partial correlations with <span class="math">\(D\)</span> and <span class="math">\(Y\)</span> by varying <code>alpha</code> and <code>delta</code>.</li>
+</ul>
+</div>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">U1&lt;-<span class="kw">genConfound</span>(<span class="dv">0</span>,<span class="dv">2</span>)
+U2&lt;-<span class="kw">genConfound</span>(<span class="dv">10</span>,<span class="dv">10</span>)
+<span class="kw">c</span>(<span class="dt">D=</span><span class="kw">cor</span>(U1,d$ddt_week),<span class="dt">Y=</span><span class="kw">cor</span>(U1,d$getwarmord))</code></pre>
+<pre><code>##          D          Y 
+## 0.03851302 0.89405287</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">c</span>(<span class="dt">D=</span><span class="kw">cor</span>(U2,d$ddt_week),<span class="dt">Y=</span><span class="kw">cor</span>(U2,d$getwarmord))</code></pre>
+<pre><code>##         D         Y 
+## 0.7200823 0.7198210</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">c</span>(<span class="dt">D=</span><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;ddt_week~U1+&quot;</span>,X),d))[<span class="st">&quot;U1&quot;</span>],<span class="dt">Y=</span><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~U1+&quot;</span>,X),d))[<span class="st">&quot;U1&quot;</span>])</code></pre>
+<pre><code>##        D.U1        Y.U1 
+## 0.006572182 0.387065938</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">c</span>(<span class="dt">D=</span><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;ddt_week~U2+&quot;</span>,X),d))[<span class="st">&quot;U2&quot;</span>],<span class="dt">Y=</span><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~U2+&quot;</span>,X),d))[<span class="st">&quot;U2&quot;</span>])</code></pre>
+<pre><code>##       D.U2       Y.U2 
+## 0.03236123 0.06691239</code></pre>
+</div>
+</section>
+<section id="continued" class="slide level1">
+<h1>Continued</h1>
+<ul>
+<li>More importantly, we can see how this changes our estimate of the treatment effect:</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">out &lt;-<span class="st"> </span><span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+&quot;</span>,X),d)
+<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>]</code></pre>
+<pre><code>##   ddt_week 
+## 0.03618393</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+U1+&quot;</span>,X),d))[<span class="st">&quot;ddt_week&quot;</span>]</code></pre>
+<pre><code>##    ddt_week 
+## 0.008236237</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+U2+&quot;</span>,X),d))[<span class="st">&quot;ddt_week&quot;</span>]</code></pre>
+<pre><code>##   ddt_week 
+## -0.9904723</code></pre>
+<ul>
+<li>Now we want to do this over a larger number of values of <code>alpha</code> and <code>delta</code></li>
+</ul>
+</div>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">alphas&lt;-<span class="kw">rnorm</span>(<span class="dv">100</span>,<span class="dv">0</span>,.<span class="dv">5</span>)
+deltas&lt;-<span class="kw">rnorm</span>(<span class="dv">100</span>,<span class="dv">0</span>,.<span class="dv">5</span>)
+results&lt;-<span class="ot">NULL</span>
+for(i in <span class="kw">seq_len</span>(<span class="kw">length</span>(alphas))) {
+  U&lt;-<span class="kw">genConfound</span>(alphas[i],deltas[i])
+  corD&lt;-<span class="kw">cor</span>(U,d$ddt_week)
+  corY&lt;-<span class="kw">cor</span>(U,d$getwarmord)
+  estTE&lt;-<span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+U+&quot;</span>,X),d))[<span class="st">&quot;ddt_week&quot;</span>]
+  <span class="kw">names</span>(estTE)&lt;-<span class="ot">NULL</span>
+  res&lt;-<span class="kw">c</span>(<span class="dt">estTE=</span>estTE,<span class="dt">corD=</span>corD,<span class="dt">corY=</span>corY)
+  results&lt;-<span class="kw">rbind</span>(results,res)
+}
+results&lt;-<span class="kw">cbind</span>(results,<span class="dt">TEchange=</span>(results[,<span class="st">&quot;estTE&quot;</span>]-<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>]))</code></pre>
+</div>
+</section>
+<section id="more" class="slide level1">
+<h1>More</h1>
+<pre class="sourceCode r"><code class="sourceCode r">resultsSens&lt;-<span class="ot">NULL</span>
+for(i in <span class="kw">seq_len</span>(<span class="kw">length</span>(alphas))) {
+  U&lt;-<span class="kw">genConfound</span>(alphas[i],deltas[i])
+  corD&lt;-<span class="kw">cor</span>(U,d$ddt_week)
+  corY&lt;-<span class="kw">cor</span>(U,d$getwarmord)
+  estTE&lt;-<span class="kw">coef</span>(<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+U+&quot;</span>,Xsens),d))[<span class="st">&quot;ddt_week&quot;</span>]
+  <span class="kw">names</span>(estTE)&lt;-<span class="ot">NULL</span>
+  res&lt;-<span class="kw">c</span>(<span class="dt">estTE=</span>estTE,<span class="dt">corD=</span>corD,<span class="dt">corY=</span>corY)
+  resultsSens&lt;-<span class="kw">rbind</span>(resultsSens,res)
+}
+resultsSens&lt;-<span class="kw">cbind</span>(resultsSens,<span class="dt">TEchange=</span>(resultsSens[,<span class="st">&quot;estTE&quot;</span>]-<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>]))</code></pre>
+</section>
+<section id="plot-simulation-code" class="slide level1">
+<h1>Plot Simulation Code</h1>
+<pre class="sourceCode r"><code class="sourceCode r">color&lt;-<span class="kw">ifelse</span>(results[,<span class="st">&quot;estTE&quot;</span>]&lt;=.<span class="dv">5</span>*<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>],<span class="st">&quot;red&quot;</span>,<span class="ot">NA</span>)
+color&lt;-<span class="kw">ifelse</span>(<span class="kw">is.na</span>(color) &amp;<span class="st"> </span>results[,<span class="st">&quot;estTE&quot;</span>]&gt;=<span class="fl">1.5</span>*<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>],<span class="st">&quot;blue&quot;</span>,color)
+color&lt;-<span class="kw">ifelse</span>(<span class="kw">is.na</span>(color),<span class="st">&quot;green&quot;</span>,color)
+<span class="kw">plot</span>(results[,<span class="st">&quot;corD&quot;</span>],results[,<span class="st">&quot;corY&quot;</span>],<span class="dt">col=</span>color,<span class="dt">xlab=</span><span class="st">&quot;correlation with D&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;correlation with Y&quot;</span>,<span class="dt">xlim=</span><span class="kw">c</span>(-<span class="dv">1</span>,<span class="dv">1</span>),<span class="dt">ylim=</span><span class="kw">c</span>(-<span class="dv">1</span>,<span class="dv">1</span>))
+vars&lt;-<span class="kw">strsplit</span>(X,<span class="st">&quot;[+]&quot;</span>,<span class="dt">perl=</span><span class="ot">TRUE</span>)[[<span class="dv">1</span>]]
+vars&lt;-vars[<span class="kw">grep</span>(<span class="st">&quot;factor&quot;</span>,vars,<span class="dt">invert=</span><span class="ot">TRUE</span>)]
+for(v in vars) {
+  corD&lt;-<span class="kw">with</span>(d,<span class="kw">cor</span>(<span class="kw">get</span>(v),d$ddt_week))
+  corY&lt;-<span class="kw">with</span>(d,<span class="kw">cor</span>(<span class="kw">get</span>(v),d$getwarmord))
+  <span class="kw">points</span>(corD,corY,<span class="dt">pch=</span><span class="st">&quot;+&quot;</span>,<span class="dt">col=</span><span class="st">&quot;black&quot;</span>)
+}
+<span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>,<span class="dt">col=</span><span class="st">&quot;grey&quot;</span>,<span class="dt">lty=</span><span class="dv">3</span>)
+<span class="kw">abline</span>(<span class="dt">h=</span><span class="dv">0</span>,<span class="dt">col=</span><span class="st">&quot;grey&quot;</span>,<span class="dt">lty=</span><span class="dv">3</span>)</code></pre>
+</section>
+<section id="plot-sensitive-model" class="slide level1">
+<h1>Plot Sensitive Model</h1>
+<pre class="sourceCode r"><code class="sourceCode r">colorS&lt;-<span class="kw">ifelse</span>(resultsSens[,<span class="st">&quot;estTE&quot;</span>]&lt;=.<span class="dv">5</span>*<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>],<span class="st">&quot;red&quot;</span>,<span class="ot">NA</span>)
+colorS&lt;-<span class="kw">ifelse</span>(<span class="kw">is.na</span>(colorS) &amp;<span class="st"> </span>resultsSens[,<span class="st">&quot;estTE&quot;</span>]&gt;=<span class="fl">1.5</span>*<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>],<span class="st">&quot;blue&quot;</span>,color)
+colorS&lt;-<span class="kw">ifelse</span>(<span class="kw">is.na</span>(colorS),<span class="st">&quot;green&quot;</span>,colorS)
+<span class="kw">plot</span>(resultsSens[,<span class="st">&quot;corD&quot;</span>],resultsSens[,<span class="st">&quot;corY&quot;</span>],<span class="dt">col=</span>color,<span class="dt">xlab=</span><span class="st">&quot;correlation with D&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;correlation with Y&quot;</span>,<span class="dt">xlim=</span><span class="kw">c</span>(-<span class="dv">1</span>,<span class="dv">1</span>),<span class="dt">ylim=</span><span class="kw">c</span>(-<span class="dv">1</span>,<span class="dv">1</span>))
+vars&lt;-<span class="kw">strsplit</span>(Xsens,<span class="st">&quot;[+]&quot;</span>,<span class="dt">perl=</span><span class="ot">TRUE</span>)[[<span class="dv">1</span>]]
+for(v in vars) {
+  corD&lt;-<span class="kw">with</span>(d,<span class="kw">cor</span>(<span class="kw">get</span>(v),d$ddt_week))
+  corY&lt;-<span class="kw">with</span>(d,<span class="kw">cor</span>(<span class="kw">get</span>(v),d$getwarmord))
+  <span class="kw">points</span>(corD,corY,<span class="dt">pch=</span><span class="st">&quot;+&quot;</span>,<span class="dt">col=</span><span class="st">&quot;black&quot;</span>)
+}
+<span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>,<span class="dt">col=</span><span class="st">&quot;grey&quot;</span>,<span class="dt">lty=</span><span class="dv">3</span>)
+<span class="kw">abline</span>(<span class="dt">h=</span><span class="dv">0</span>,<span class="dt">col=</span><span class="st">&quot;grey&quot;</span>,<span class="dt">lty=</span><span class="dv">3</span>)</code></pre>
+</section>
+<section id="plot-of-the-results" class="slide level1">
+<h1>Plot of the Results</h1>
+<figure>
+<img src="figure/3-conf-sim-plot-1.png" />
+</figure>
+</section>
+<section id="blackwell-2013" class="slide level1">
+<h1>Blackwell (2013)</h1>
+<ul>
+<li>Instead, imagine a function which defines the confounding.</li>
+<li><span class="math">\(q(d,x) = E[Y_i(d)|D_i = d, X_i = x] - E[Y_i(d)|D_i = 1 - d, X_i = x]\)</span></li>
+<li>Treated counterfactuals always higher (lower): <span class="math">\(q(d,x;\alpha) = \alpha\)</span></li>
+<li>Treated group potential outcomes always higher (lower): <span class="math">\(q(d,x;\alpha) = \alpha(2 d - 1)\)</span></li>
+<li>Package on CRAN: <code>causalsens</code></li>
+<li>You should probably use this for the homework.</li>
+</ul>
+</section>
+<section id="example-1" class="slide level1">
+<h1>Example</h1>
+<ul>
+<li>Remove the fixed effects to make it sensitive:</li>
+</ul>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(causalsens)</code></pre>
+<pre><code>## Loading required package: causalsens</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">d$ddt_week&lt;-<span class="kw">ifelse</span>(d$ddt_week&gt;<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>)
+out&lt;-<span class="kw">lm</span>(<span class="kw">paste0</span>(<span class="st">&quot;getwarmord~ddt_week+&quot;</span>,<span class="kw">paste</span>(vars,<span class="dt">collapse=</span><span class="st">&quot;+&quot;</span>)),<span class="dt">data=</span>d)
+<span class="kw">coef</span>(out)[<span class="st">&quot;ddt_week&quot;</span>]</code></pre>
+<pre><code>##   ddt_week 
+## 0.04557408</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">outD&lt;-<span class="kw">glm</span>(<span class="kw">paste0</span>(<span class="st">&quot;ddt_week~&quot;</span>,<span class="kw">paste</span>(vars,<span class="dt">collapse=</span><span class="st">&quot;+&quot;</span>)),<span class="dt">data=</span>d,<span class="dt">family=</span><span class="kw">binomial</span>())
+alpha&lt;-<span class="kw">seq</span>(-.<span class="dv">1</span>, .<span class="dv">1</span>, <span class="dt">by =</span> .<span class="dv">001</span>)
+SensAnalysis&lt;-<span class="kw">causalsens</span>(out,outD,<span class="kw">as.formula</span>(<span class="kw">paste0</span>(<span class="st">&quot;~&quot;</span>,<span class="kw">paste</span>(vars,<span class="dt">collapse=</span><span class="st">&quot;+&quot;</span>))),<span class="dt">data=</span>d,<span class="dt">alpha=</span>alpha,<span class="dt">confound=</span>one.sided)</code></pre>
+</section>
+<section id="sensitivity-plots" class="slide level1">
+<h1>Sensitivity Plots</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+<span class="kw">plot</span>(SensAnalysis,<span class="dt">type=</span><span class="st">&quot;raw&quot;</span>,<span class="dt">bty=</span><span class="st">&quot;n&quot;</span>)
+<span class="kw">plot</span>(SensAnalysis,<span class="dt">type=</span><span class="st">&quot;r.squared&quot;</span>,<span class="dt">bty=</span><span class="st">&quot;n&quot;</span>)</code></pre>
+<figure>
+<img src="figure/3-blackwell-plots-1.png" />
+</figure>
+</section>
+<section id="sensitivity-analysis-1" class="slide level1">
+<h1>Sensitivity Analysis</h1>
+<ul>
+<li>We’re adding to the discussion on post-treatment bias with a sensitivity analysis.</li>
+<li>This is also in Rosenbaum (1984).</li>
+<li>The variable which one might think could induce post-treatment bias in our example is that of “public acceptance”.</li>
+</ul>
+</section>
+<section id="rosenbaum-bounding" class="slide level1">
+<h1>Rosenbaum Bounding</h1>
+<ul>
+<li>In general Rosenbaum is a proponent of trying to “bound” biases.</li>
+<li>He does this in his “normal” sensitivity analysis method, and we do the same, here.</li>
+<li>We will assume a “surrogate” for <span class="math">\(U\)</span> (necessary for CIA), which is observed post-treatment.</li>
+<li>The surrogate has two potential outcomes: <span class="math">\(S_1\)</span> and <span class="math">\(S_0\)</span></li>
+<li>It is presumed to have a linear response on the outcome.</li>
+<li>(As are the other observed covariates)</li>
+<li>This gives us the following two regression models: <span class="math">\(E[Y_1|S_1 = s , X = x] = \mu_1 + \beta&#39; x + \gamma&#39;s\)</span> and<br /><span class="math">\(E[Y_0|S_0 = s , X = x] = \mu_0 + \beta&#39; x + \gamma&#39;s\)</span></li>
+<li>This gives us:<br /><span class="math">\(\tau = E[ (\mu_1 + \beta&#39; X + \gamma&#39;S_1) - (\mu_0 + \beta&#39; X + \gamma&#39;S_0)]\)</span></li>
+<li>Which is equal to the following useful expression:<br /><span class="math">\(\tau = \mu_1 - \mu_0 + \gamma&#39;( E[S_1 - S_0])\)</span></li>
+<li>For us, this means that <span class="math">\(\tau = \beta_1 + \beta_2 E[S_1 - S_0]\)</span></li>
+</ul>
+</section>
+<section id="reintroduce-example" class="slide level1">
+<h1>(Re)introduce Example</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(foreign,<span class="dt">quietly=</span><span class="ot">TRUE</span>)
+d &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;replicationdataIOLGBT.dta&quot;</span>)
+<span class="co">#Base specification</span>
+d$ecthrpos &lt;-<span class="st"> </span><span class="kw">as.double</span>(d$ecthrpos)-<span class="dv">1</span>
+d.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)
+d &lt;-<span class="st"> </span>d[-d.lm$na.action,]
+d$issue &lt;-<span class="st"> </span><span class="kw">as.factor</span>(d$issue)
+d$ccode &lt;-<span class="st"> </span><span class="kw">as.factor</span>(d$ccode)
+d.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(policy~ecthrpos+pubsupport+ecthrcountry+lgbtlaws+cond+eumember0+euemploy+coemembe+lngdp+year+issue+ccode,d)</code></pre>
+</section>
+<section id="back-to-bounding" class="slide level1">
+<h1>Back to Bounding</h1>
+<ul>
+<li>Our surrogate is public acceptance.</li>
+<li>But it can be swayed by court opinions, right? This is at least plausible.</li>
+<li>Let’s try and get some reasonable bounds on <span class="math">\(\tau\)</span>.</li>
+</ul>
+<div class="fragment">
+<pre class="sourceCode r"><code class="sourceCode r">sdS &lt;-<span class="st"> </span><span class="kw">sd</span>(d$pubsupport)
+Ediff &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="fl">1.5</span>*sdS,-sdS,-sdS/<span class="dv">2</span>,<span class="dv">0</span>,sdS/<span class="dv">2</span>,sdS,<span class="fl">1.5</span>*sdS)
+tau &lt;-<span class="st"> </span><span class="kw">coef</span>(d.lm)[<span class="dv">2</span>] +<span class="st"> </span><span class="kw">coef</span>(d.lm)[<span class="dv">3</span>]*Ediff
+<span class="kw">names</span>(tau)&lt;-<span class="kw">c</span>(<span class="st">&quot;-1.5&quot;</span>,<span class="st">&quot;-1&quot;</span>,<span class="st">&quot;-.5&quot;</span>,<span class="st">&quot;0&quot;</span>,<span class="st">&quot;.5&quot;</span>,<span class="st">&quot;1&quot;</span>,<span class="st">&quot;1.5&quot;</span>)
+tau</code></pre>
+<pre><code>##       -1.5         -1        -.5          0         .5          1 
+## 0.06620715 0.06817761 0.07014808 0.07211854 0.07408901 0.07605947 
+##        1.5 
+## 0.07802994</code></pre>
+<ul>
+<li>But with this method, you don’t necessarily have to assume that the regression functions are this rigid.</li>
+<li>Can you think about how one might relax some assumptions?</li>
+</ul>
+</div>
+</section>
+    </div>
+  </div>
+
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.min.js"></script>
+
+  <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } },
+//          { src: 'reveal.js/plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; }, }
+//          { src: 'reveal.js/plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+]});
+    </script>
+    </body>
+</html>
